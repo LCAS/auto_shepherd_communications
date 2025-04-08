@@ -16,7 +16,7 @@
 SX1262 radio = new Module(LORA_SS, LORA_DIO1, LORA_RST, LORA_BUSY, SPI1);
 
 // Hard-coded device ID
-String deviceID = "myDevice00X";
+String deviceID = "myDevice001";
 
 // Heartbeat timer (5-second interval)
 unsigned long lastHeartbeat = 0;
@@ -115,18 +115,26 @@ void handleReceivedPacket() {
 
     // Read received data
     String str;
-    if (str == "") { return; }
-    
     int state = radio.readData(str);
+    if (str == "") { 
+      Serial.print("empty...");
+      Serial.println(state);
+      return;
+    }
+
     if (state == RADIOLIB_ERR_NONE) {
       // Check if this is a heartbeat packet
       // i.e. it starts with "heartbeat---"
-      if (str.startsWith("heartbeat---")) {
+      Serial.println("_____________");
+      Serial.println(str);
+      if (str.startsWith(">>> heartbeat---")) {
         // parse the sender ID (whatever follows "heartbeat---")
-        String senderID = str.substring(strlen("heartbeat---"));
+        String senderID = str.substring(strlen(">>> heartbeat---"));
         // ignore if it's the same device ID
+
         if (senderID == deviceID) {
           // do nothing, ignore self-heartbeat
+          Serial.println("loopback");
         } else {
           // print out two lines:
           // line 1: sender_id + "   <3"

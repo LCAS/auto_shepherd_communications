@@ -23,6 +23,7 @@ unsigned long lastHeartbeat = 0;
 
 // Flag for received packet
 volatile bool receivedFlag = false;
+String last_msg = "none";
 
 // ISR callback for when a LoRa packet arrives
 #if defined(ESP8266) || defined(ESP32)
@@ -51,6 +52,7 @@ void checkSerialInput() {
         Serial.println(standbyState);
       } else {
         // Transmit the message
+        last_msg = message;
         int txState = radio.transmit(message);
         if (txState == RADIOLIB_ERR_NONE) {
           // Serial.println("Transmission ok.");
@@ -88,7 +90,9 @@ void sendHeartbeat() {
       int txState = radio.transmit(heartbeatMsg);
       if (txState == RADIOLIB_ERR_NONE) {
         // Print only sender_id + "   <3"
-        Serial.println(deviceID + "   <3");
+        Serial.println(">>>>>>>>>>>>>>");
+        Serial.print("sending <3: ");
+        Serial.println(deviceID);
       } else {
         Serial.print("Heartbeat error: ");
         Serial.println(txState);
@@ -117,32 +121,43 @@ void handleReceivedPacket() {
     String str;
     int state = radio.readData(str);
     if (str == "") { 
-      Serial.print("empty...");
+      Serial.println("1<<<<<<<<<<<<<<");
+      Serial.print("empty: ");
       Serial.println(state);
       return;
+    }
+
+    // Check if this is the message we just sent
+    if (str == last_msg) {
+      Serial.println("2<<<<<<<<<<<<<<");
+      Serial.println("loopback(msg)");
+      last_msg = "none";
+      //return;
     }
 
     if (state == RADIOLIB_ERR_NONE) {
       // Check if this is a heartbeat packet
       // i.e. it starts with "heartbeat---"
-      Serial.println("_____________");
-      Serial.println(str);
-      if (str.startsWith(">>> heartbeat---")) {
+      Serial.println("3<<<<<<<<<<<<<<");
+      //Serial.print("msg: ");
+      //Serial.println(str);
+      if (str.startsWith("heartbeat---")) {
         // parse the sender ID (whatever follows "heartbeat---")
-        String senderID = str.substring(strlen(">>> heartbeat---"));
+        String senderID = str.substring(strlen("heartbeat---"));
         // ignore if it's the same device ID
 
         if (senderID == deviceID) {
           // do nothing, ignore self-heartbeat
-          Serial.println("loopback");
+          //Serial.println("loopback(<3)");
         } else {
           // print out two lines:
           // line 1: sender_id + "   <3"
           // line 2: "<3   " + our deviceID
-          Serial.println(senderID + "   <3");
+          Serial.print("recieving <3: ");
+          Serial.println(senderID);
         }
       } else {
-        Serial.print("<< ");
+        Serial.print("msg: ");
         Serial.println(str);
         // // Normal (non-heartbeat) packet was successfully received
         // Serial.println("[SX1262] Received packet!");
@@ -218,6 +233,9 @@ void setup() {
   // Initialize heartbeat timer
   lastHeartbeat = millis();
   digitalWrite(LED_PIN, LOW);
+
+  Serial.print("Device Name: ");
+  Serial.println(deviceID);
 }
 
 void loop() {

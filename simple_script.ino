@@ -16,10 +16,11 @@
 SX1262 radio = new Module(LORA_SS, LORA_DIO1, LORA_RST, LORA_BUSY, SPI1);
 
 // Hard-coded device ID
-String deviceID = "myDevice00X";
+String deviceID = "myDevice001";
 
 // Heartbeat timer (5-second interval)
 unsigned long lastHeartbeat = 0;
+String heartBeatCode = "#<3";
 
 // Flag for received packet
 volatile bool receivedFlag = false;
@@ -42,7 +43,7 @@ void checkSerialInput() {
 
     if (message.length() > 0) {
       digitalWrite(LED_PIN, HIGH);
-      Serial.print(">> ");
+      Serial.print(">>| ");
       Serial.println(message);
 
       // We have to stop listening to transmit
@@ -72,7 +73,7 @@ void checkSerialInput() {
   }
 }
 
-// 2. Send a heartbeat every 5 seconds in the format "heartbeat---" + deviceID
+// 2. Send a heartbeat every 5 seconds in the format heartBeatCode + deviceID
 void sendHeartbeat() {
   if (millis() - lastHeartbeat >= 5000) {
     digitalWrite(LED_PIN, HIGH);
@@ -85,14 +86,14 @@ void sendHeartbeat() {
       Serial.println(standbyState);
     } else {
       // Construct the heartbeat message
-      String heartbeatMsg = "heartbeat---" + deviceID;
+      String heartbeatMsg = heartBeatCode + deviceID;
       // Transmit the heartbeat
       int txState = radio.transmit(heartbeatMsg);
       if (txState == RADIOLIB_ERR_NONE) {
         // Print only sender_id + "   <3"
         //Serial.println(">>>>>>>>>>>>>>");
-        Serial.print(">3: ");
-        Serial.println(deviceID);
+        Serial.print(">3| ");
+        Serial.println(heartbeatMsg);
       } else {
         Serial.print("Heartbeat error: ");
         Serial.println(txState);
@@ -101,6 +102,7 @@ void sendHeartbeat() {
       // Resume listening
       int rxState = radio.startReceive();
       if (rxState != RADIOLIB_ERR_NONE) {
+        Serial.print("ER| ");
         Serial.print("Failed to resume listening, code ");
         Serial.println(rxState);
       }
@@ -116,71 +118,63 @@ void handleReceivedPacket() {
   if (receivedFlag) {
     // reset the flag
     receivedFlag = false;
+    Serial.println("  |_________________");
 
     // Read received data
-    String str;
+    String str = "";
+    Serial.print("  | Before: ");
+    Serial.println(str);
     int state = radio.readData(str);
-    if (str == "") { 
-      // Serial.println("1<<<<<<<<<<<<<<");
-      // Serial.print("empty: ");
-      // Serial.println(state);
-      return;
+    Serial.print("  | After: ");
+    Serial.println(str);
+    
+    // Reanable radio listener
+    int rxState = radio.startReceive();
+    if (rxState != RADIOLIB_ERR_NONE) {
+      Serial.print("ER| ");
+      Serial.print("Failed to resume listening, code ");
+      Serial.println(rxState);
     }
 
-    if (state == RADIOLIB_ERR_NONE) {
-      // Check if this is a heartbeat packet
-      // i.e. it starts with "heartbeat---"
-      // Serial.println("3<<<<<<<<<<<<<<");
-      //Serial.print("msg: ");
-      //Serial.println(str);
-      if (str == last_msg) {
-        // Check if this is the message we just sent
-        // Serial.println("2<<<<<<<<<<<<<<");
-        // Serial.println("loopback(msg)");
-        last_msg = "none";
-        //return;
-      } else if (str.startsWith("heartbeat---")) {
-        // parse the sender ID (whatever follows "heartbeat---")
-        String senderID = str.substring(strlen("heartbeat---"));
-        // ignore if it's the same device ID
+    Serial.print("In| ");
+    Serial.println(str);
 
-        if (senderID == deviceID) {
-          // do nothing, ignore self-heartbeat
-          //Serial.println("loopback(<3)");
-        } else {
-          // print out two lines:
-          // line 1: sender_id + "   <3"
-          // line 2: "<3   " + our deviceID
-          Serial.print("<3: ");
-          Serial.println(senderID);
-        }
-      } else {
-        Serial.print("<<");
-        Serial.println(str);
-        // // Normal (non-heartbeat) packet was successfully received
-        // Serial.println("[SX1262] Received packet!");
-        // // Print the data
-        // Serial.print("[SX1262] Data: ");
-        // Serial.println(str);
-        // // Print RSSI
-        // Serial.print("[SX1262] RSSI: ");
-        // Serial.print(radio.getRSSI());
-        // Serial.println(" dBm");
-        // // Print SNR
-        // Serial.print("[SX1262] SNR: ");
-        // Serial.print(radio.getSNR());
-        // Serial.println(" dB");
-        // // Print frequency error
-        // Serial.print("[SX1262] Frequency error: ");
-        // Serial.print(radio.getFrequencyError());
-        // Serial.println(" Hz");
+
+    if (state == RADIOLIB_ERR_NONE) {
+      // If message is empty, skip processing
+      if (str == "") { 
+        Serial.print("--| ");
+        Serial.println("empty");
       }
+      // Check if this is the message we just sent
+      else if (str == last_msg){
+        if (str != "none") {
+          Serial.print("--| ");
+          Serial.println("loopback");
+          last_msg = "none";
+        }
+      }
+      // Check if this is a heartbeat packet
+      else if (str.startsWith(heartBeatCode)) {
+        // parse the sender ID (whatever follows heartBeatCode)
+        String senderID = str.substring(strlen(heartBeatCode.c_str()));
+        if (senderID != deviceID) {
+          Serial.print("<3| ");
+          Serial.println(senderID); //heartbeat
+        }
+      }
+      else {
+        Serial.print("<<| ");
+        Serial.println(str); //regular message
+      }
+
     } else if (state == RADIOLIB_ERR_CRC_MISMATCH) {
-      // Packet was received, but is malformed
-      Serial.println("CRC error!");
+      Serial.print("ER| ");
+      Serial.println("CRC error!"); //malformed
+
     } else {
-      // Some other error occurred
-      Serial.print("Read error, code ");
+      Serial.print("ER| ");
+      Serial.print("Read error, code "); //err
       Serial.println(state);
     }
   }

@@ -16,7 +16,7 @@
 SX1262 radio = new Module(LORA_SS, LORA_DIO1, LORA_RST, LORA_BUSY, SPI1);
 
 // Hard-coded device ID
-String deviceID = "myDevice001";
+String deviceID = "myDevice00X";
 
 // Heartbeat timer (5-second interval)
 unsigned long lastHeartbeat = 0;
@@ -90,8 +90,8 @@ void sendHeartbeat() {
       int txState = radio.transmit(heartbeatMsg);
       if (txState == RADIOLIB_ERR_NONE) {
         // Print only sender_id + "   <3"
-        Serial.println(">>>>>>>>>>>>>>");
-        Serial.print("sending <3: ");
+        //Serial.println(">>>>>>>>>>>>>>");
+        Serial.print(">3: ");
         Serial.println(deviceID);
       } else {
         Serial.print("Heartbeat error: ");
@@ -121,27 +121,25 @@ void handleReceivedPacket() {
     String str;
     int state = radio.readData(str);
     if (str == "") { 
-      Serial.println("1<<<<<<<<<<<<<<");
-      Serial.print("empty: ");
-      Serial.println(state);
+      // Serial.println("1<<<<<<<<<<<<<<");
+      // Serial.print("empty: ");
+      // Serial.println(state);
       return;
-    }
-
-    // Check if this is the message we just sent
-    if (str == last_msg) {
-      Serial.println("2<<<<<<<<<<<<<<");
-      Serial.println("loopback(msg)");
-      last_msg = "none";
-      //return;
     }
 
     if (state == RADIOLIB_ERR_NONE) {
       // Check if this is a heartbeat packet
       // i.e. it starts with "heartbeat---"
-      Serial.println("3<<<<<<<<<<<<<<");
+      // Serial.println("3<<<<<<<<<<<<<<");
       //Serial.print("msg: ");
       //Serial.println(str);
-      if (str.startsWith("heartbeat---")) {
+      if (str == last_msg) {
+        // Check if this is the message we just sent
+        // Serial.println("2<<<<<<<<<<<<<<");
+        // Serial.println("loopback(msg)");
+        last_msg = "none";
+        //return;
+      } else if (str.startsWith("heartbeat---")) {
         // parse the sender ID (whatever follows "heartbeat---")
         String senderID = str.substring(strlen("heartbeat---"));
         // ignore if it's the same device ID
@@ -153,11 +151,11 @@ void handleReceivedPacket() {
           // print out two lines:
           // line 1: sender_id + "   <3"
           // line 2: "<3   " + our deviceID
-          Serial.print("recieving <3: ");
+          Serial.print("<3: ");
           Serial.println(senderID);
         }
       } else {
-        Serial.print("msg: ");
+        Serial.print("<<");
         Serial.println(str);
         // // Normal (non-heartbeat) packet was successfully received
         // Serial.println("[SX1262] Received packet!");

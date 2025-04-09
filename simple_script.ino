@@ -55,6 +55,14 @@ void checkSerialInput() {
         // Transmit the message
         last_msg = message;
         int txState = radio.transmit(message);
+
+        
+        
+// src/modules/LR11x0/LR11x0.cpp:179:int16_t LR11x0::transmit(const uint8_t* data, size_t len, uint8_t addr) {
+
+
+
+        
         if (txState == RADIOLIB_ERR_NONE) {
           // Serial.println("Transmission ok.");
         } else {

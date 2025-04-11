@@ -2,7 +2,7 @@ from setuptools import setup
 from glob import glob
 import os
 
-package_name = 'ros2_python_template'
+package_name = 'auto_shepherd_communications'
 pkg = package_name
 
 setup(

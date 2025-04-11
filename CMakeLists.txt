@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(ros2_python_template)
+project(auto_shepherd_communications)
 
 # Export information to downstream packages
 ament_export_dependencies(rosidl_default_runtime)

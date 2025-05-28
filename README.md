@@ -4,8 +4,8 @@
 To establish and encourage data communications between groups, including communication hardware and protocols for their use. 
 
 ## Preparation in Advance:  
-- Follow the preparation instructions on [Getting-Started]()
-- Some materials on LoRa: [LoRa De-Mystified](), [LoRaWAN in 40min]()
+- Follow the preparation instructions on [Getting-Started](https://github.com/LCAS/auto_shepherd_communications/wiki/Getting-Started)
+- Some materials on LoRa: [LoRa De-Mystified](https://www.youtube.com/watch?v=hMOwbNUpDQA), [LoRaWAN in 40min](https://www.youtube.com/watch?v=Bsue0PzNRDU)
 - Some materials on nRF:  
 
 ## Activities:

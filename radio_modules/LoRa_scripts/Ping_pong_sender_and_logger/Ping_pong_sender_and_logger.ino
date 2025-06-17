@@ -42,32 +42,20 @@ void loop() {
   delay(500);
   String reply;
   state = radio.receive(reply);
-  Serial.println(reply + " recieved");
-  unsigned long endTime = millis();
-  Serial.print("Elapsed time (ms): ");
-  Serial.println(endTime - startTime);
+
+  if(reply == "PONG") {
+    Serial.println(reply + " recieved");
+    unsigned long endTime = millis();
+  
+    unsigned long elapsedTime = (endTime - startTime);
+    Serial.println("elapsed time: " + String(elapsedTime));
+  }
   if (state == RADIOLIB_ERR_NONE) {
-      // packet was successfully received
-      Serial.println(F("[SX1262] Received packet!"));
+      
 
-      // print data of the packet
-      Serial.print(F("[SX1262] Data:\t\t"));
-      //Serial.println(str);
+      Serial.println(" RSSI: " + String(radio.getRSSI()) + " dBm | SNR: " + String(radio.getSNR()) + " dB | Freq Error: " + String(radio.getFrequencyError()) + " Hz");
 
-      // print RSSI (Received Signal Strength Indicator)
-      Serial.print(F("[SX1262] RSSI:\t\t"));
-      Serial.print(radio.getRSSI());
-      Serial.println(F(" dBm"));
 
-      // print SNR (Signal-to-Noise Ratio)
-      Serial.print(F("[SX1262] SNR:\t\t"));
-      Serial.print(radio.getSNR());
-      Serial.println(F(" dB"));
-
-      // print frequency error
-      Serial.print(F("[SX1262] Frequency error:\t"));
-      Serial.print(radio.getFrequencyError());
-      Serial.println(F(" Hz"));
 
     }
   

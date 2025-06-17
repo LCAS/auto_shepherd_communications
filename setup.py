@@ -15,12 +15,13 @@ setup(
     ],
     install_requires=['setuptools'],
     zip_safe=True,
-    maintainer='james',
-    maintainer_email='primordia@live.com',
-    description='TODO: Package description',
+    maintainer='robert',
+    maintainer_email='28260769@Students.lincoln.ac.uk',
+    description='ROS2 Communications for the Auto Shepard Summer School Work',
     license='TODO: License declaration',
     entry_points={
         'console_scripts': [
+            'serial_node = auto_shepherd_communications.serial_node:main'
         ],
     },
 )

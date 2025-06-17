@@ -5,8 +5,11 @@
   <version>0.0.1</version>
   <description>The auto_shepherd_communications package</description>
 
-  <maintainer email="primordia@live.com">james</maintainer>
+  <maintainer email="28260769@Students.lincoln.ac.uk">robert</maintainer>
   <license>TODO: License declaration</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>std_msgs</exec_depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

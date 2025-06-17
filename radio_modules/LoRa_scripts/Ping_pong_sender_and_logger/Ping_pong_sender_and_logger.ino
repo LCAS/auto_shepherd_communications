@@ -36,11 +36,16 @@ void setup() {
 void loop() {
   delay(1000);
   Serial.println("Sending: PING");
+ 
   int state = radio.transmit("PING");
+  unsigned long startTime = millis();
   delay(500);
   String reply;
   state = radio.receive(reply);
-  Serial.println(reply);
+  Serial.println(reply + " recieved");
+  unsigned long endTime = millis();
+  Serial.print("Elapsed time (ms): ");
+  Serial.println(endTime - startTime);
   if (state == RADIOLIB_ERR_NONE) {
       // packet was successfully received
       Serial.println(F("[SX1262] Received packet!"));

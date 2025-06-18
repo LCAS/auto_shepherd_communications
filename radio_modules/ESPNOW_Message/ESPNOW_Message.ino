@@ -25,7 +25,7 @@ esp_now_peer_info_t peerInfo;
 
 // Message structure
 struct MessageData {
-  char message[100];
+  char message[50];
   int deviceId;
   int messageCount;
   unsigned long timestamp;
@@ -60,14 +60,44 @@ void setup() {
 void loop() {
   unsigned long currentTime = millis();
   
-  // Send a message every few seconds
+  // Check if there's data available from USB serial
+  if (SERIAL.available() > 0) {
+    String serialInput = SERIAL.readStringUntil('\n');
+    serialInput.trim(); // Remove any trailing whitespace/newlines
+    
+    if (serialInput.length() > 0) {
+      // Prepare message data
+      messageCounter++;
+      sendData.messageCount = messageCounter;
+      sendData.timestamp = currentTime;
+      sendData.isResponse = false;
+      
+      // Copy the serial input to the message (limit to message array size)
+      strncpy(sendData.message, serialInput.c_str(), sizeof(sendData.message) - 1);
+      sendData.message[sizeof(sendData.message) - 1] = '\0'; // Ensure null termination
+      
+      SERIAL.print("[SERIAL->ESP-NOW] Sending: ");
+      SERIAL.println(sendData.message);
+      
+      // Send via ESP-NOW
+      esp_err_t result = esp_now_send(targetMAC, (uint8_t *) &sendData, sizeof(sendData));
+      if (result != ESP_OK) {
+        SERIAL.println("[ERROR] Failed to send serial data via ESP-NOW");
+      }
+    }
+  }
+  
+  // Optional: Keep the periodic test messages from Device 1 (comment out if not needed)
+  /*
   if (currentTime - lastSendTime >= sendInterval) {
     #if DEVICE_ID == 1
     sendTestMessage();
     #endif
     lastSendTime = currentTime;
   }
-  delay(100);
+  */
+  
+  delay(10); // Small delay to prevent overwhelming the system
 }
 
 void initControllerConnection() {

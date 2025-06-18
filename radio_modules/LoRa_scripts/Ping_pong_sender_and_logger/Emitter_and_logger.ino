@@ -1,5 +1,3 @@
-
-
 #include <SPI.h>
 #include <RadioLib.h>
 
@@ -13,129 +11,102 @@
 #define LORA_BUSY    18
 #define LORA_ANT_SW  17
 
+#define LED_PIN 25  // Adjust to 18 for Tiny2040
+
 SX1262 radio = new Module(LORA_SS, LORA_DIO1, LORA_RST, LORA_BUSY, SPI1);
 
-// save transmission states between loops
+volatile bool operationDone = false;
+bool transmitFlag = false;
 int transmissionState = RADIOLIB_ERR_NONE;
 
-// flag to indicate transmission or reception state
-bool transmitFlag = false;
-unsigned long startTime;
-unsigned long endTime;
+unsigned long sendTime = 0;
+unsigned long receiveTime = 0;
+unsigned long lastResponseTime = 0;
 
-// flag to indicate that a packet was sent or received
-volatile bool operationDone = false;
+const unsigned long packetTimeout = 2000;     // Max wait for response
+const unsigned long noSignalTimeout = 20000;  // LED on if no signal for 20s
 
-// this function is called when a complete packet
-// is transmitted or received by the module
-// IMPORTANT: this function MUST be 'void' type
-//            and MUST NOT have any arguments!
 #if defined(ESP8266) || defined(ESP32)
-  ICACHE_RAM_ATTR
+ICACHE_RAM_ATTR
 #endif
-void setFlag(void) {
-  // we sent or received a packet, set the flag
+void setFlag() {
   operationDone = true;
 }
 
-
-
-
-
 void setup() {
   Serial.begin(9600);
-  //while (!Serial);
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
 
   SPI1.setRX(LORA_MISO);
   SPI1.setTX(LORA_MOSI);
   SPI1.setSCK(LORA_SCK);
   SPI1.begin(false);
 
-  int state = radio.begin(868.0, 125.0, 6, 5,
-                            RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 17, 14, 0);
-if (state == RADIOLIB_ERR_NONE) {
-    Serial.println(F("success!"));
-  } else {
-    Serial.print(F("failed, code "));
+  int state = radio.begin(868.0, 125.0, 6, 5, RADIOLIB_SX126X_SYNC_WORD_PRIVATE, 17, 14, 0);
+  if (state != RADIOLIB_ERR_NONE) {
+    Serial.print(F("Failed to start radio, code "));
     Serial.println(state);
     while (true) { delay(10); }
   }
 
-  // set the function that will be called
-  // when new packet is received
   radio.setDio1Action(setFlag);
-
-  #if defined(INITIATING_NODE)
-    // send the first packet on this node
-    Serial.print(F("[SX1262] Sending first packet ... "));
-    transmissionState = radio.startTransmit("PING");
-    
-    transmitFlag = true;
-  #else
-    // start listening for LoRa packets on this node
-    Serial.print(F("[SX1262] Starting to listen ... "));
-    state = radio.startReceive();
-    if (state == RADIOLIB_ERR_NONE) {
-      Serial.println(F("success!"));
-    } else {
-      Serial.print(F("failed, code "));
-      Serial.println(state);
-      while (true) { delay(10); }
-    }
-  #endif
+  Serial.println(F("[SX1262] Sending first packet ..."));
+  transmissionState = radio.startTransmit("PING");
+  transmitFlag = true;
+  sendTime = millis();
+  lastResponseTime = millis();
 }
+
 void loop() {
-  // check if the previous operation finished
-  if(operationDone) {
-    // reset flag
+  unsigned long now = millis();
+
+  // Check for timeout while waiting for response
+  if (!operationDone && !transmitFlag && now - sendTime > packetTimeout) {
+    Serial.println(F("[SX1262] Timeout: no response, retrying..."));
+    transmissionState = radio.startTransmit("PING");
+    transmitFlag = true;
+    sendTime = now;
+  }
+
+  // Check if no packet received in last 20s
+  if (now - lastResponseTime > noSignalTimeout) {
+    digitalWrite(LED_PIN, HIGH);  // No signal, LED on
+  } else {
+    digitalWrite(LED_PIN, LOW);   // Signal OK
+  }
+
+  if (operationDone) {
     operationDone = false;
 
-    if(transmitFlag) {
-      // the previous operation was transmission, listen for response
-      // print the result
+    if (transmitFlag) {
       if (transmissionState == RADIOLIB_ERR_NONE) {
-        // packet was successfully sent
-        Serial.println(F("transmission finished!"));
-        startTime = millis();
-
+        Serial.println(F("Transmission finished."));
+        sendTime = millis();
       } else {
-        Serial.print(F("failed, code "));
+        Serial.print(F("Transmission failed, code "));
         Serial.println(transmissionState);
-
       }
 
-      // listen for response
       radio.startReceive();
       transmitFlag = false;
-
     } else {
-      // the previous operation was reception
-      // print data and send another packet
       String str;
       int state = radio.readData(str);
 
       if (state == RADIOLIB_ERR_NONE) {
-        // packet was successfully received
+        receiveTime = millis();
+        lastResponseTime = receiveTime;
+
         Serial.println(F("[SX1262] Received packet!"));
-        endTime = millis();
-  
-        unsigned long elapsedTime = (endTime - startTime);
-       // Serial.println("elapsed time: " + String(elapsedTime));
-        
+        Serial.println("Elapsed: " + String(receiveTime - sendTime) + " ms | RSSI: " + String(radio.getRSSI()) + " dBm | SNR: " + String(radio.getSNR()) + " dB");
 
-        Serial.println("elapsed time: " + String(elapsedTime) + " ms | RSSI: " + String(radio.getRSSI()) + " dBm | SNR: " + String(radio.getSNR()) + " dB | Freq Error: " + String(radio.getFrequencyError()) + " Hz");
-
-
+        delay(1000);
+        Serial.println(F("[SX1262] Sending next packet ..."));
+        transmissionState = radio.startTransmit("PING");
+        transmitFlag = true;
+        sendTime = millis();
       }
-
-      // wait a second before transmitting again
-      delay(1000);
-
-      // send another one
-      Serial.print(F("[SX1262] Sending another packet ... "));
-      transmissionState = radio.startTransmit("PING");
-      transmitFlag = true;
     }
-  
   }
 }

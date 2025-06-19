@@ -20,17 +20,11 @@ class SerialCommNode(Node):
         super().__init__('Serial_Communication_Node')
         
         # list of parameters used by the serial node
-        parameters=[
-            ('serial_device_path', '/dev/ttyUSB0'),
-            ('baudrate', 115200),
-            ('serial_timeout', 1.0),
-            ('serial_topic', 1),
-            ('publishing_rate', 1.0),
-        ]
+
         self.declare_parameter('serial_device_path', '/dev/ttyUSB0')
         self.declare_parameter('baudrate', 115200)
         self.declare_parameter('serial_timeout', 1.0)
-        self.declare_parameter('publishing_rate', 1.0)
+        self.declare_parameter('publishing_rate', 0.1)
         self.declare_parameter('serial_topic', 1)
         rate = self.get_parameter('publishing_rate').get_parameter_value().double_value
         # Subscriptions
@@ -59,17 +53,17 @@ class SerialCommNode(Node):
         self.packet_to_send = b''
         self.LENGTH_FIELD_SIZE = 4
         self.MSG_TYPE_IDS = MSG_TYPE_IDS = {
-            'PoseStamped': 0,
-            'Twist': 1,
-            'NavSatFix': 2,
-            'Imu': 3,
+            'PoseStamped': b'\x00',
+            'Twist': b'\x01',
+            'NavSatFix': b'\x02',
+            'Imu': b'\x03',
         }
         # === Message type ID map ===
         self.ID_TO_INFO = {
-            0: ('/goal_pose2', PoseStamped),
-            1: ('/cmd_vel2', Twist),
-            2: ('/gps/fix2', NavSatFix),
-            3: ('/imu/data2', Imu),
+            b'\x00': ('/goal_pose2', PoseStamped),
+            b'\x01': ('/cmd_vel2', Twist),
+            b'\x02': ('/gps/fix2', NavSatFix),
+            b'\x03': ('/imu/data2', Imu),
         }
         self.my_publishers = {}
         for type_id, (topic, msg_class) in self.ID_TO_INFO.items():
@@ -87,13 +81,21 @@ class SerialCommNode(Node):
     def send_callback(self, msg):
         msg_type = msg.__class__.__name__
         type_id = self.MSG_TYPE_IDS.get(msg_type)
-        type_id_bytes=type_id.to_bytes(1, 'big') 
         # Fully serialize the ROS 2 message to bytes
         serialized = serialize_message(msg)
 
+        msg = deserialize_message(serialized, PoseStamped)
+        print(msg)
+        #serializedbytes = serialized.tobytes(serialized, byteorder='big')
         # Add length prefix for framing
         length_bytes = len(serialized).to_bytes(self.LENGTH_FIELD_SIZE, byteorder='big')
-        self.packet_to_send = self.START_MARKER + length_bytes + type_id_bytes + serialized
+        #print(f"length: {length_bytes}")
+        #print(f"type_id_bytes: {type_id}")
+
+        my_string = "Hello"
+        my_bytes = my_string.encode('utf-8')  # default encoding is UTF-8
+        print(f"Serialized = {serialized}")
+        self.packet_to_send = self.START_MARKER + length_bytes + type_id + serialized
             
     def get_param_float(self, name):
         try:

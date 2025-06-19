@@ -12,8 +12,11 @@ from rclpy.node import Node
 from rclpy.serialization import serialize_message
 from rclpy.serialization import deserialize_message
 from std_msgs.msg import String
-from geometry_msgs.msg import PoseStamped, Twist
+from geometry_msgs.msg import PoseStamped, Twist, Pose
 from sensor_msgs.msg import NavSatFix, Imu
+import time
+import threading
+from rclpy.executors import MultiThreadedExecutor
 
 class SerialCommNode(Node):
     def __init__(self):
@@ -26,12 +29,10 @@ class SerialCommNode(Node):
         self.declare_parameter('serial_timeout', 1.0)
         self.declare_parameter('publishing_rate', 0.1)
         self.declare_parameter('serial_topic', 1)
+        self.serial_lock = threading.Lock()
         rate = self.get_parameter('publishing_rate').get_parameter_value().double_value
         # Subscriptions
         self.create_subscription(PoseStamped, '/goal_pose', self.send_callback, 10)
-        self.create_subscription(Twist, '/cmd_vel', self.send_callback, 10)
-        self.create_subscription(NavSatFix, '/gps/fix', self.send_callback, 10)
-        self.create_subscription(Imu, '/imu/data', self.send_callback, 10)
 
         self.timer = self.create_timer(1.0 / rate, self.timer_callback)
         
@@ -55,27 +56,22 @@ class SerialCommNode(Node):
         self.MSG_TYPE_IDS = MSG_TYPE_IDS = {
             'PoseStamped': b'\x00',
             'Twist': b'\x01',
-            'NavSatFix': b'\x02',
-            'Imu': b'\x03',
         }
         # === Message type ID map ===
         self.ID_TO_INFO = {
-            b'\x00': ('/goal_pose2', PoseStamped),
-            b'\x01': ('/cmd_vel2', Twist),
-            b'\x02': ('/gps/fix2', NavSatFix),
-            b'\x03': ('/imu/data2', Imu),
+            b'\x00': ('/gps/filtered2', NavSatFix),
         }
         self.my_publishers = {}
         for type_id, (topic, msg_class) in self.ID_TO_INFO.items():
             self.my_publishers[type_id] = self.create_publisher(msg_class, topic, 10)
+        self.RecieverLoop()
     
     def read_exact(self, size):
         data = b''
         while len(data) < size:
             chunk = self.serial_device.read(size - len(data))
-            if not chunk:
-                raise RuntimeError("Serial read timeout or disconnection.")
-            data += chunk
+            data += chunk#
+            rclpy.spin_once(self, timeout_sec=0.0)
         return data
     
     def send_callback(self, msg):
@@ -83,18 +79,7 @@ class SerialCommNode(Node):
         type_id = self.MSG_TYPE_IDS.get(msg_type)
         # Fully serialize the ROS 2 message to bytes
         serialized = serialize_message(msg)
-
-        msg = deserialize_message(serialized, PoseStamped)
-        print(msg)
-        #serializedbytes = serialized.tobytes(serialized, byteorder='big')
-        # Add length prefix for framing
         length_bytes = len(serialized).to_bytes(self.LENGTH_FIELD_SIZE, byteorder='big')
-        #print(f"length: {length_bytes}")
-        #print(f"type_id_bytes: {type_id}")
-
-        my_string = "Hello"
-        my_bytes = my_string.encode('utf-8')  # default encoding is UTF-8
-        print(f"Serialized = {serialized}")
         self.packet_to_send = self.START_MARKER + length_bytes + type_id + serialized
             
     def get_param_float(self, name):
@@ -117,23 +102,57 @@ class SerialCommNode(Node):
         #TODO add timeout to this
         while True:
             byte = self.read_exact(1)
+            #print(byte)
             if byte == self.START_MARKER[:1]:
                 second = self.read_exact(1)
                 if second == self.START_MARKER[1:]:
                     return
 
     def timer_callback(self):
+        #print("send")
         if self.packet_to_send == b'':
             self.packet_to_send = self.Emptypacket
-        self.serial_device.write(self.packet_to_send)
-        print(f"sending = {self.packet_to_send}")
+        with self.serial_lock:
+            self.serial_device.write(self.packet_to_send)
+        #print(f"sending = {self.packet_to_send}")
         self.packet_to_send = b''
+
+    def RecieverLoop(self):
+        while True:
+            #print("hi")
+            self.sync_to_start_marker()
+            #print("hi2")
+            length_bytes = self.read_exact(4)
+            length = int.from_bytes(length_bytes, byteorder='big') 
+            print(f"length: {length} {length_bytes}")
+            if length != 0:
+                type_id = self.read_exact(1)
+                print(f"typeID: {type_id}")
+                msg_class = self.ID_TO_INFO.get(type_id)
+                if not msg_class:
+                    print(f"Unknown type_id: {type_id}")
+                else:
+                    payload_length = int.from_bytes(length_bytes, 'big')
+                    serialized_data = self.read_exact(payload_length)
+                    #print(f"Data: {serialized_data}")
+                    #print(f"msg class - {msg_class}")
+                    msg = deserialize_message(serialized_data, msg_class[1])
+                    print(msg)
+                    #print(f"typeID - {type_id}")
+                    self.my_publishers[type_id].publish(msg)
         
 
 def main(args=None):
+    """
     rclpy.init(args=args)
     node = SerialCommNode()
     rclpy.spin(node)
+    """
+    rclpy.init(args=args)
+    node = SerialCommNode()
+    executor = MultiThreadedExecutor()
+    executor.add_node(node)
+    executor.spin()
     node.destroy_node()
     rclpy.shutdown()
 

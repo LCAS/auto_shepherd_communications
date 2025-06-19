@@ -15,6 +15,7 @@ from geometry_msgs.msg import Twist
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped, Twist
 from sensor_msgs.msg import NavSatFix, Imu
+import time
 
 class SerialCommNode(Node):
     def __init__(self):
@@ -24,7 +25,7 @@ class SerialCommNode(Node):
         parameters=[
             ('serial_device_path', '/dev/ttyUSB1'),
             ('baudrate', 115200),
-            ('serial_timeout', 1.0),
+            ('serial_timeout', 10),
             ('serial_topic', 1),
             ('publishing_rate', 1.0),
         ]
@@ -36,10 +37,7 @@ class SerialCommNode(Node):
         self.declare_parameter('serial_topic', 1)
         rate = self.get_parameter('publishing_rate').get_parameter_value().double_value
         # Subscriptions
-        self.create_subscription(PoseStamped, '/goal_pose', self.send_callback, 10)
-        self.create_subscription(Twist, '/cmd_vel', self.send_callback, 10)
-        self.create_subscription(NavSatFix, '/gps/fix', self.send_callback, 10)
-        self.create_subscription(Imu, '/imu/data', self.send_callback, 10)        
+        self.create_subscription(NavSatFix, '/gps/filtered', self.send_callback, 10)
         # Read parameter values
         device_path = self.get_parameter('serial_device_path').get_parameter_value().string_value
         baudrate = self.get_parameter('baudrate').get_parameter_value().integer_value
@@ -59,17 +57,12 @@ class SerialCommNode(Node):
         self.LENGTH_FIELD_SIZE = 4
         self.packet_to_send = b''
         self.MSG_TYPE_IDS = MSG_TYPE_IDS = {
-            'PoseStamped': b'\x00',
-            'Twist': b'\x01',
-            'NavSatFix': b'\x02',
-            'Imu': b'\x03',
+            'NavSatFix': b'\x00',
         }
         # === Message type ID map ===
         self.ID_TO_INFO = {
-            b'\x00': ('/goal_pose3', PoseStamped),
-            b'\x01': ('/cmd_vel3', Twist),
-            b'\x02': ('/gps/fix3', NavSatFix),
-            b'\x03': ('/imu/data3', Imu),
+            b'\x00': ('/goal_pose2', PoseStamped),
+            b'\x01': ('/cmd_vel2', Twist),
         }
 
         self.my_publishers = {}
@@ -100,6 +93,7 @@ class SerialCommNode(Node):
         while len(data) < size:
             chunk = self.serial_device.read(size - len(data))
             data += chunk
+            rclpy.spin_once(self, timeout_sec=0.0)
         return data
     
     def sync_to_start_marker(self):
@@ -115,13 +109,10 @@ class SerialCommNode(Node):
     def send_callback(self,msg):
         msg_type = msg.__class__.__name__
         type_id = self.MSG_TYPE_IDS.get(msg_type)
-        type_id_bytes=type_id.to_bytes(1, 'big') 
         # Fully serialize the ROS 2 message to bytes
         serialized = serialize_message(msg)
-
-        # Add length prefix for framing
         length_bytes = len(serialized).to_bytes(self.LENGTH_FIELD_SIZE, byteorder='big')
-        self.packet_to_send = self.START_MARKER + length_bytes + type_id_bytes + serialized
+        self.packet_to_send = self.START_MARKER + length_bytes + type_id + serialized
 
     def RecieverLoop(self):
         while True:
@@ -144,11 +135,12 @@ class SerialCommNode(Node):
                     #print(msg)
                     #print(f"typeID - {type_id}")
                     self.my_publishers[type_id].publish(msg)
-            if self.packet_to_send == b'':
-                self.packet_to_send = self.Emptypacket
-            self.serial_device.write(self.packet_to_send)
-            #print(f"sending = {self.packet_to_send}")
-            self.packet_to_send = b''
+                time.sleep(0.05)
+                if self.packet_to_send == b'':
+                    self.packet_to_send = self.Emptypacket
+                self.serial_device.write(self.packet_to_send)
+                print(f"sending = {self.packet_to_send}")
+                self.packet_to_send = b''
 
 def main(args=None):
     rclpy.init(args=args)

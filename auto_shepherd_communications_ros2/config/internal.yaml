@@ -1,5 +1,6 @@
 defaults:
     sample_data: 'none'
+    sample_rate: 1
     source: 'ros'
     qos_profile:
         reliability: 'reliable'

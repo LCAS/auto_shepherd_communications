@@ -22,7 +22,9 @@ setup(
     entry_points={
         'console_scripts': [
             'serial_node.py = auto_shepherd_communications_ros2.serial_node:main',
-            'serial_node_receiver.py = auto_shepherd_communications_ros2.serial_node_receiver:main'
+            'serial_node_receiver.py = auto_shepherd_communications_ros2.serial_node_receiver:main',
+            'bridge_interface.py = auto_shepherd_communications_ros2.bridge_interface:main',
+            'data_loader_node.py = auto_shepherd_communications_ros2.data_loader_node:main'
         ],
     },
 )

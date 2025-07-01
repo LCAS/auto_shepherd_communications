@@ -21,7 +21,8 @@ setup(
     license='TODO: License declaration',
     entry_points={
         'console_scripts': [
-            'serial_node = auto_shepherd_communications_ros2.serial_node:main'
+            'serial_node.py = auto_shepherd_communications_ros2.serial_node:main',
+            'serial_node_receiver.py = auto_shepherd_communications_ros2.serial_node_receiver:main'
         ],
     },
 )

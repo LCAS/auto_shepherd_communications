@@ -12,6 +12,7 @@ init_cmd: |
   # Simulated device declarations
   export device_a='/dev/tnt0'
   export device_b='/dev/tnt1'
+  export comms_config='./config/internal.yaml'
 
 windows:
 
@@ -24,4 +25,3 @@ windows:
   - name: communicator_b
     panes:
       - ros2 run auto_shepherd_communications_ros2 serial_node.py device:=$device_b
-      - ros2 run auto_shepherd_communications_ros2 bridge_interface.py

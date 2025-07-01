@@ -1,0 +1,17 @@
+defaults:
+    sample_data: 'none'
+    source: 'ros'
+    qos_profile:
+        reliability: 'reliable'
+        history: 'keep_last'
+        durability: 'volatile'
+        depth: 1
+
+topics:
+
+  - topic_name: '/gnss/filtered'
+    msg_type: 'sensor_msgs/msgs/NavSatFix'
+
+  - topic_name: '/goal_pose_gnss'
+    msg_type: 'sensor_msgs/msgs/NavSatFix'
+    source: 'serial'

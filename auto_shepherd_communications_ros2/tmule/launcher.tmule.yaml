@@ -10,12 +10,13 @@ init_cmd: |
   set -o pipefail
 
 
-windows:
+  # Simulated device declarations
+  export device='/dev/ttyACM0'
+  export comms_config='./config/internal.yaml'
 
-#  - name: data_loader
-#    panes:
-#      - ros2 run auto_shepherd_communications_ros2 data_loader_node.py
+windows:
 
   - name: communicator
     panes:
-      - ros2 run auto_shepherd_communications_ros2 serial_node.py
+      - ros2 run auto_shepherd_communications_ros2 bridge_interface.py
+      - ros2 run auto_shepherd_communications_ros2 serial_node.py device:=$device

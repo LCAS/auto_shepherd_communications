@@ -46,8 +46,28 @@ echo "ROS 2 workspace setup and sourced. Happy robot wrangling!"
 # Mark that the setup has been run in this shell session
 export _ROS_WORKSPACE_SETUP_RUN=true
 
+# Setup ROS2 DDS Settings
+export ROS_DOMAIN_ID=70
+unset ROS_LOCALHOST_ONLY
+
+# Set display value
+#export DISPLAY=:0
+
+# Setup .tmux.conf
+TMUX_CONF="$HOME/bash_scripts/tmux.conf"
+[ ! -f "$HOME/.tmux.conf" ] && cp $TMUX_CONF "$HOME/.tmux.conf"
+
 # Define custom functions to control the tmule
-export TMULE_FILE=${BASE_WS}/src/auto_shepherd_communications_ros2/tmule/launcher.tmule.yaml
-function s(){  tmule -c $TMULE_FILE -W 3 launch ; }
-function t(){  tmule -c $TMULE_FILE terminate ; }
-function r(){  tmule -c $TMULE_FILE -W 3 relaunch ; }
+alias t='tmux'
+
+# TMuLe for connecting with other subsystems
+export CONNECTED=${BASE_WS}/src/auto_shepherd_communications_ros2/tmule/connected.tmule.yaml
+function con(){  tmule -c $CONNECTED $1 ; }
+
+# TMuLe for injecting data to inputs
+export INJECTED=${BASE_WS}/src/auto_shepherd_communications_ros2/tmule/injected.tmule.yaml
+function inj(){  tmule -c $INJECTED $1 ; }
+
+# TMuLe for simulating the RF module
+export SIMULATED=${BASE_WS}/src/auto_shepherd_communications_ros2/tmule/simulated.tmule.yaml
+function sim(){  tmule -c $SIMULATED $1 ; }

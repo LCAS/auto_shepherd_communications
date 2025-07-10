@@ -1,0 +1,30 @@
+services:
+  auto_shepherd_communications_ros2_humble:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: auto-shepherd-communications-ros2-humble # resulting image name
+
+    stdin_open: true
+    tty: true
+    command: /bin/bash # default shell when you attach
+    network_mode: host # helps ROS 2 discovery (optional)
+
+    privileged: true
+    devices:
+      - /dev:/dev
+
+    # — Bind‑mount each git sub‑module into the workspace ————————————
+    volumes:
+      - ../auto_shepherd_communications_ros2:/home/ros/base_ws/src/auto_shepherd_communications_ros2:rw
+
+      # Bash Scripts
+      - ../bash_scripts/container:/home/ros/bash_scripts:rw
+
+      # enable mount for gui applications
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+
+    environment:
+      - BASE_WS=/home/ros/base_ws
+      - DISPLAY=:0
+      - QT_X11_NO_MITSHM=1

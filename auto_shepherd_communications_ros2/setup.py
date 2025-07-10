@@ -2,7 +2,7 @@ from setuptools import setup
 from glob import glob
 import os
 
-package_name = 'auto_shepherd_communications'
+package_name = 'auto_shepherd_communications_ros2'
 pkg = package_name
 
 setup(
@@ -21,7 +21,10 @@ setup(
     license='TODO: License declaration',
     entry_points={
         'console_scripts': [
-            'serial_node = auto_shepherd_communications.serial_node:main'
+            'serial_node.py = auto_shepherd_communications_ros2.serial_node:main',
+            'serial_node_receiver.py = auto_shepherd_communications_ros2.serial_node_receiver:main',
+            'bridge_interface.py = auto_shepherd_communications_ros2.bridge_interface:main',
+            'data_loader_node.py = auto_shepherd_communications_ros2.data_loader_node:main'
         ],
     },
 )

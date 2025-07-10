@@ -1,0 +1,28 @@
+session: communicator
+init_cmd: |
+  echo " "
+  echo " "
+  echo " "
+  echo "Running Initialisation"
+
+  #exec /bin/bash
+  cd @TMULE_CONFIG_DIR@ || true
+  set -o pipefail
+
+  # Source the .bashrc
+  source ~/.bashrc
+
+  # Setup ROS2 DDS Settings
+  export ROS_DOMAIN_ID=70
+  unset ROS_LOCALHOST_ONLY
+
+  # Simulated device declarations
+  export device='/dev/ttyACM0'
+  export comms_config='./config/connected.yaml'
+
+windows:
+
+  - name: system
+    panes:
+      - ros2 run auto_shepherd_communications_ros2 bridge_interface.py
+      - ros2 run auto_shepherd_communications_ros2 serial_node.py device:=$device

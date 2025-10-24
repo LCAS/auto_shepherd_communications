@@ -67,7 +67,3 @@ function con(){  tmule -c $CONNECTED $1 ; }
 # TMuLe for injecting data to inputs
 export INJECTED=${BASE_WS}/src/auto_shepherd_communications_ros2/tmule/injected.tmule.yaml
 function inj(){  tmule -c $INJECTED $1 ; }
-
-# TMuLe for simulating the RF module
-export SIMULATED=${BASE_WS}/src/auto_shepherd_communications_ros2/tmule/simulated.tmule.yaml
-function sim(){  tmule -c $SIMULATED $1 ; }

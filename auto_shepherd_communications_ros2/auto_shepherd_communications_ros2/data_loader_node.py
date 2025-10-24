@@ -9,7 +9,6 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy as QoSR, QoSHistoryPolicy as QoSH, QoSDurabilityPolicy as QoSD
 
-
 class DataLoaderNode(Node):
     def __init__(self):
         super().__init__("data_loader_node")

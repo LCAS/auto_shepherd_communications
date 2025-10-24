@@ -11,6 +11,8 @@ setup(
     packages=[package_name],
     data_files=[
         ('share/ament_index/resource_index/packages', [f'resource/{pkg}']),
+        (f"share/{pkg}/config", glob(os.path.join('config', '*.rviz'))),
+        (f"share/{pkg}/config", glob(os.path.join('config', '*.yaml'))),
         (f'share/{pkg}', ['package.xml']),
     ],
     install_requires=['setuptools'],

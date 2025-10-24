@@ -16,21 +16,25 @@ init_cmd: |
   export ROS_DOMAIN_ID=70
   unset ROS_LOCALHOST_ONLY
 
+  # Identify share directory
+  pkg="auto_shepherd_communications_ros2"
+  export PKG="$(ros2 pkg prefix $pkg)/share/$pkg/config"
+
   # Simulated device declarations
-  export device_a='/dev/tnt0'
-  export device_b='/dev/tnt1'
-  export comms_config='./config/injected.yaml'
+  export RF_DEVICE='/dev/ttyVserver'
+  export LOOPBACK_DEVICE='/dev/ttyVrobot'
+  export TOPIC_CONFIG="$PKG/robot.yaml"
 
 windows:
 
   - name: outputs
     panes:
-      - ros2 run auto_shepherd_communications_ros2 serial_node_reciever.py device:=$device_b
+      - ros2 run auto_shepherd_communications_ros2 serial_node_reciever.py device:=$LOOPBACK_DEVICE
 
   - name: system
     panes:
       - ros2 run auto_shepherd_communications_ros2 bridge_interface.py
-      - ros2 run auto_shepherd_communications_ros2 serial_node.py device:=$device_a
+      - ros2 run auto_shepherd_communications_ros2 serial_node.py device:=$RF_DEVICE
 
   - name: inputs
     panes:

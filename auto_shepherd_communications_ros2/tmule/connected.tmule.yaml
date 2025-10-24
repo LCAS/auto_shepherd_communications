@@ -17,12 +17,12 @@ init_cmd: |
   unset ROS_LOCALHOST_ONLY
 
   # Simulated device declarations
-  export device='/dev/ttyACM0'
-  export comms_config='./config/connected.yaml'
+  export RF_DEVICE='/dev/ttyVserver'
+  export TOPIC_CONFIG='./config/connected.yaml'
 
 windows:
 
   - name: system
     panes:
       - ros2 run auto_shepherd_communications_ros2 bridge_interface.py
-      - ros2 run auto_shepherd_communications_ros2 serial_node.py device:=$device
+      - ros2 run auto_shepherd_communications_ros2 serial_node.py device:=$RF_DEVICE

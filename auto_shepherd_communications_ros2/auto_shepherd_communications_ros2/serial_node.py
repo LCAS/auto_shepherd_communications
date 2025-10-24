@@ -1,11 +1,12 @@
 '''
 serial_node.py
 
-Basic Serial device bridge node with generic message reading and 
+Basic Serial device bridge node with generic message reading and
 publishing, along with subscribing and writing
 
 '''
 
+import os
 import serial
 import rclpy
 from rclpy.node import Node
@@ -21,10 +22,10 @@ from rclpy.executors import MultiThreadedExecutor
 class SerialCommNode(Node):
     def __init__(self):
         super().__init__('Serial_Communication_Node')
-        
-        # list of parameters used by the serial node
 
-        self.declare_parameter('serial_device_path', '/dev/ttyUSB0')
+        # list of parameters used by the serial node
+        dev = os.getenv('RF_DEVICE')
+        self.declare_parameter('serial_device_path', dev)
         self.declare_parameter('baudrate', 115200)
         self.declare_parameter('serial_timeout', 1.0)
         self.declare_parameter('publishing_rate', 0.1)
@@ -35,7 +36,7 @@ class SerialCommNode(Node):
         self.create_subscription(PoseStamped, '/goal_pose', self.send_callback, 10)
 
         self.timer = self.create_timer(1.0 / rate, self.timer_callback)
-        
+
         # Read parameter values
         device_path = self.get_parameter('serial_device_path').get_parameter_value().string_value
         baudrate = self.get_parameter('baudrate').get_parameter_value().integer_value
@@ -65,7 +66,7 @@ class SerialCommNode(Node):
         for type_id, (topic, msg_class) in self.ID_TO_INFO.items():
             self.my_publishers[type_id] = self.create_publisher(msg_class, topic, 10)
         self.RecieverLoop()
-    
+
     def read_exact(self, size):
         data = b''
         while len(data) < size:
@@ -73,7 +74,7 @@ class SerialCommNode(Node):
             data += chunk#
             rclpy.spin_once(self, timeout_sec=0.0)
         return data
-    
+
     def send_callback(self, msg):
         msg_type = msg.__class__.__name__
         type_id = self.MSG_TYPE_IDS.get(msg_type)
@@ -81,7 +82,7 @@ class SerialCommNode(Node):
         serialized = serialize_message(msg)
         length_bytes = len(serialized).to_bytes(self.LENGTH_FIELD_SIZE, byteorder='big')
         self.packet_to_send = self.START_MARKER + length_bytes + type_id + serialized
-            
+
     def get_param_float(self, name):
         try:
             return float(self.get_parameter(name).get_parameter_value().double_value)
@@ -97,7 +98,7 @@ class SerialCommNode(Node):
             return self.get_parameter(name).get_parameter_value().integer_value
         except:
             pass
-    
+
     def sync_to_start_marker(self):
         #TODO add timeout to this
         while True:
@@ -140,7 +141,7 @@ class SerialCommNode(Node):
                     print(msg)
                     #print(f"typeID - {type_id}")
                     self.my_publishers[type_id].publish(msg)
-        
+
 
 def main(args=None):
     """
